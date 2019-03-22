@@ -1,6 +1,7 @@
 ;;; better-jumper.el --- description -*- lexical-binding: t; -*-
 
 ;;; Commentary:
+;;;  A configurable jump list implementation for Emacs.
 ;;; Code:
 
 (defgroup better-jumper nil
@@ -30,6 +31,11 @@
   :type 'integer
   :group 'better-jumper)
 
+(defcustom better-jumper-use-evil-jump-advice t
+  "When non-nil, advice is added to add jumps whenever `evil-set-jump' is invoked."
+  :type 'boolean
+  :group 'better-jumper)
+
 (defcustom better-jumper-pre-jump-hook nil
   "Hooks to run just before jumping to a location in the jump list."
   :type 'hook
@@ -45,11 +51,6 @@
   :type '(repeat string)
   :group 'better-jumper)
 
-(defcustom better-jumper-use-evil-jump-advice t
-  "When non-nil, advice is added to add jumps whenever `evil-set-jump' is invoked."
-  :type 'boolean
-  :group 'better-jumper)
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defvar better-jumper--jumping nil
@@ -59,7 +60,7 @@
   "Regexp to match against `buffer-name' to determine whether it's a valid jump target.")
 
 (defvar better-jumper--jump-table (make-hash-table)
-  "Hashtable which stores all jumps on a per perspective/window basis.")
+  "Hashtable which stores all jumps on a per perspective/window/buffer basis.")
 
 (cl-defstruct better-jumper-jump-list-struct
   ring
@@ -255,6 +256,7 @@ Uses the current window or buffer if CONTEXT is nil."
 ;;;   PUBLIC FUNCTIONS    ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;;;###autoload
 (defun better-jumper-set-jump (&optional pos)
   "Set jump point at POS.
 POS defaults to point."
@@ -274,6 +276,7 @@ POS defaults to point."
         (goto-char pos))
       (better-jumper--push))))
 
+;;;###autoload
 (defun better-jumper-jump-backward ()
   "Jump backward to previous location in jump list."
   (interactive)
@@ -285,6 +288,7 @@ POS defaults to point."
       (better-jumper--push))
     (better-jumper--jump idx 1)))
 
+;;;###autoload
 (defun better-jumper-jump-forward ()
   "Jump forward to previous location in jump list."
   (interactive)
@@ -303,13 +307,15 @@ POS defaults to point."
 
 (defun better-jumper--before-persp-deactivate (&rest args)
   "Save jump state when a perspective is deactivated. Ignore ARGS."
-  (better-jumper--persp-disable-window-config-update)
-  (better-jumper--save-perspective-jump-state))
+  (when better-jumper-isolate-perspectives
+    (better-jumper--persp-disable-window-config-update)
+    (better-jumper--save-perspective-jump-state)))
 
 (defun better-jumper--on-persp-activate (&rest args)
   "Restore jump state when a perspective is activated. Ignore ARGS."
-  (better-jumper--restore-perspective-jump-state)
-  (better-jumper--persp-enable-window-config-update))
+  (when better-jumper-isolate-perspectives
+    (better-jumper--restore-perspective-jump-state)
+    (better-jumper--persp-enable-window-config-update)))
 
 (with-eval-after-load 'persp-mode
   (add-hook 'persp-before-deactivate-functions #'better-jumper--before-persp-deactivate)
@@ -323,7 +329,8 @@ Cleans up deleted windows and copies history to newly created windows."
     (let* ((window-list (window-list-1 nil nil t))
            (jump-table (better-jumper--get-jump-table)))
       (when (and (eq better-jumper-new-window-behavior 'copy)
-                 (not (better-jumper--persp-window-config-update-disabled)))
+                 (and better-jumper-isolate-perspectives
+                      (not (better-jumper--persp-window-config-update-disabled))))
         (let* ((curr-window (selected-window))
                (source-jump-struct (better-jumper--get-struct curr-window))
                (source-jump-list (better-jumper--get-struct-jump-list source-jump-struct)))

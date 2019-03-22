@@ -14,6 +14,14 @@ Better jumper exposes the following functions
 | better-jumper-jump-backward | Jumps to back to previous location in jump list                     |
 | better-jumper-jump-forward  | Jumps forward to next location in jump list                         |
 
+Configure as a drop in replacement for `evil-jump`:
+
+```
+(with-eval-after-load 'evil-maps
+  (define-key evil-motion-state-map (kbd "C-o") 'better-jumper-jump-backward)
+  (define-key evil-motion-state-map (kbd "<C-i>") 'better-jumper-jump-forward))
+```
+
 <br />
 
 ## Configuration Options

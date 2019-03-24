@@ -16,7 +16,9 @@
   :group 'better-jumper)
 
 (defcustom better-jumper-isolate-perspectives t
-  "When non-nil, the jump commands respect buffer isolation provided by persp-mode perspectives."
+  "When non-nil, jump commands respect buffer isolation provided by persp-mode.
+Better jumper will store jump lists as persp-parameters that will be saved and
+loaded along with pserspectives."
   :type 'boolean
   :group 'better-jumper)
 
@@ -66,6 +68,11 @@
   ring
   (idx -1))
 
+(defun better-jumper-use-perspectives ()
+  "Return bool values indicating if perspectives should be used."
+  (and better-jumper-isolate-perspectives
+       (boundp 'persp-mode)))
+
 (defun better-jumper--get-jump-table-perspective (&optional persp)
   "Get jump table from PERSP or current perspective.
 This should be used when `better-jumper-isolate-perspectives' is non-nil."
@@ -85,7 +92,7 @@ This should be used when `better-jumper-isolate-perspectives' is non-nil."
   "Get jump table.
 The jump table is sourced either globally or from the current perspective
 depending on configuration."
-  (if better-jumper-isolate-perspectives
+  (if (better-jumper-use-perspectives)
       (better-jumper--get-jump-table-perspective)
     (better-jumper--get-jump-table-global)))
 
@@ -101,8 +108,8 @@ depending on configuration."
 
 (defun better-jumper--get-struct (&optional context)
   "Get current jump struct for CONTEXT.
-Creates and adds jump struct to perspective if missing. Uses current frame
-window if WINDOW parameter is missing."
+Creates and adds jump struct if one does not exist. Uses current window or
+buffer if CONTEXT parameter is missing."
   (unless context
     (setq context (better-jumper--get-current-context)))
   (let* ((jump-table (better-jumper--get-jump-table))
@@ -122,12 +129,13 @@ window if WINDOW parameter is missing."
 
 (defun better-jumper--get-jump-list (&optional context)
   "Gets jump list for CONTEXT.
-Uses the current window or buffer if CONTEXT is nil."
+Uses the current context if CONTEXT is nil."
   (let ((struct (better-jumper--get-struct context)))
     (better-jumper--get-struct-jump-list struct)))
 
 (defun better-jumper--jump (idx shift &optional context)
-  "Jump from position IDX using SHIFT on CONTEXT or current context."
+  "Jump from position IDX using SHIFT on CONTEXT.
+Uses current context if CONTEXT is nil."
   (let ((jump-list (better-jumper--get-jump-list context)))
     (setq idx (+ idx shift))
     (let* ((current-file-name (or (buffer-file-name) (buffer-name)))
@@ -147,9 +155,10 @@ Uses the current window or buffer if CONTEXT is nil."
           (setf (better-jumper-jump-list-struct-idx (better-jumper--get-struct context)) idx)
           (run-hooks 'better-jumper-post-jump-hook))))))
 
-(defun better-jumper--push ()
-  "Pushes the current cursor/file position to the jump list."
-  (let* ((jump-list (better-jumper--get-jump-list))
+(defun better-jumper--push (&optional context)
+  "Pushes the current cursor/file position to the jump list for CONTEXT.
+Uses current context if CONTEXT is nil."
+  (let* ((jump-list (better-jumper--get-jump-list context))
          (file-name (buffer-file-name))
          (buffer-name (buffer-name))
          (current-pos (point))
@@ -171,17 +180,13 @@ Uses the current window or buffer if CONTEXT is nil."
                        (equal first-file-name file-name))
             (ring-insert jump-list `(,current-pos ,file-name)))))))
 
-(defun better-jumper--persp-disable-window-config-update ()
-  "Set persp parameter to disable window config update."
-  (set-persp-parameter 'better-jumper-window-config-update-disabled t))
-
-(defun better-jumper--persp-enable-window-config-update ()
-  "Set persp parameter to disable window config update."
-  (set-persp-parameter 'better-jumper-window-config-update-disabled nil))
+(defun better-jumper--set-persp-window-config-update-disabled (disabled)
+  "If DISABLED is non-nil then disable window config update."
+  (set-persp-parameter 'better-jumper-window-config-update-disabled disabled))
 
 (defun better-jumper--persp-window-config-update-disabled ()
   "Indicate if window config update should be disabled for this persp."
-  (persp-parameter 'better-jumper-window-config-update-disabled ))
+  (persp-parameter 'better-jumper-window-config-update-disabled))
 
 (defun better-jumper--create-window-jump-state ()
   "Create dump of the window specific jump state."
@@ -260,7 +265,9 @@ Uses the current window or buffer if CONTEXT is nil."
 (defun better-jumper-set-jump (&optional pos)
   "Set jump point at POS.
 POS defaults to point."
-  (unless (region-active-p)
+  (unless (or (region-active-p)
+              (and (boundp 'evil-visual-state-p)
+                   (evil-visual-state-p)))
     (push-mark pos t))
 
   (unless better-jumper--jumping
@@ -277,29 +284,32 @@ POS defaults to point."
       (better-jumper--push))))
 
 ;;;###autoload
-(defun better-jumper-jump-backward ()
-  "Jump backward to previous location in jump list."
+(defun better-jumper-jump-backward (&optional count)
+  "Jump backward COUNT positions to previous location in jump list.
+If COUNT is nil then defaults to 1."
   (interactive)
-  (let* ((struct (better-jumper--get-struct))
+  (let* ((count (or count 1))
+         (struct (better-jumper--get-struct))
          (idx (better-jumper-jump-list-struct-idx struct)))
     (when (= idx -1)
       (setq idx 0)
       (setf (better-jumper-jump-list-struct-idx struct) 0)
       (better-jumper--push))
-    (better-jumper--jump idx 1)))
+    (better-jumper--jump idx count)))
 
 ;;;###autoload
-(defun better-jumper-jump-forward ()
-  "Jump forward to previous location in jump list."
+(defun better-jumper-jump-forward (&optional count)
+  "Jump forward COUNT positions to location in jump list.
+If COUNT is nil then defaults to 1."
   (interactive)
-  (let* ((struct (better-jumper--get-struct))
+  (let* ((count (or count 1))
+         (struct (better-jumper--get-struct))
          (idx (better-jumper-jump-list-struct-idx struct)))
         (when (= idx -1)
           (setq idx 0)
           (setf (better-jumper-jump-list-struct-idx struct) 0)
           (better-jumper--push))
-        (better-jumper--jump idx -1)))
-
+        (better-jumper--jump idx (- 0 count))))
 
 ;;;;;;;;;;;;;;;;;;
 ;;;   HOOKS    ;;;
@@ -307,15 +317,15 @@ POS defaults to point."
 
 (defun better-jumper--before-persp-deactivate (&rest args)
   "Save jump state when a perspective is deactivated. Ignore ARGS."
-  (when better-jumper-isolate-perspectives
-    (better-jumper--persp-disable-window-config-update)
+  (when (better-jumper-use-perspectives)
+    (better-jumper--set-persp-window-config-update-disabled t)
     (better-jumper--save-perspective-jump-state)))
 
 (defun better-jumper--on-persp-activate (&rest args)
   "Restore jump state when a perspective is activated. Ignore ARGS."
-  (when better-jumper-isolate-perspectives
+  (when (better-jumper-use-perspectives)
     (better-jumper--restore-perspective-jump-state)
-    (better-jumper--persp-enable-window-config-update)))
+    (better-jumper--set-persp-window-config-update-disabled nil)))
 
 (with-eval-after-load 'persp-mode
   (add-hook 'persp-before-deactivate-functions #'better-jumper--before-persp-deactivate)
@@ -329,7 +339,7 @@ Cleans up deleted windows and copies history to newly created windows."
     (let* ((window-list (window-list-1 nil nil t))
            (jump-table (better-jumper--get-jump-table)))
       (when (and (eq better-jumper-new-window-behavior 'copy)
-                 (and better-jumper-isolate-perspectives
+                 (and (better-jumper-use-perspectives)
                       (not (better-jumper--persp-window-config-update-disabled))))
         (let* ((curr-window (selected-window))
                (source-jump-struct (better-jumper--get-struct curr-window))

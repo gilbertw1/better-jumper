@@ -34,11 +34,7 @@ list is maintained for each individual buffer. Conversly, if the value is
 `'window` then the jump list is maintained per window and will operate across
 buffers in that window.
 
-##### *Isolate Perspectives* - `better-jumper-isolate-perspectives`
-
-If this setting is non-nil then jump lists will be isolated between
-`persp-mode` perspectives. Additionally, jump list state will be saved alongside 
-perspective configuration when a perspective is saved.
+*NOTE* - `'buffer` context support is temporarily not working.
 
 ##### *New Window Behavior* - `better-jumper-new-window-behavior`
 
@@ -81,8 +77,7 @@ provides more customization options as well as a few other core improvements.
 A few advantages of `better-jumper` are:
 
 * Properly isolates jump lists between `persp-mode` perspectives and saves the
-  jump lists to those perspectives. It uses a number of tricks to accurately pin
-  jump lists to windows across perspectives.
+  jump lists to those perspectives.
 
 * True buffer specific jump lists. When instructed to not cross buffer
   boundaries `evil-jumper` still tracks jumps per window only limits the jumps

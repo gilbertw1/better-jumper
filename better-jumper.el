@@ -63,11 +63,11 @@
 
 (defun better-jumper--copy-struct (struct)
   "Return a copy of STRUCT."
-  (let* ((jump-list (better-jumper--get-struct-jump-list))
+  (let* ((jump-list (better-jumper--get-struct-jump-list struct))
          (struct-copy (make-better-jumper-jump-list-struct)))
     (setf (better-jumper-jump-list-struct-idx struct-copy) (better-jumper-jump-list-struct-idx struct))
     (setf (better-jumper-jump-list-struct-ring struct-copy) (ring-copy jump-list))
-    (struct-copy)))
+    struct-copy))
 
 (defun better-jumper--set-window-struct (window struct)
   "Set jump struct for WINDOW to STRUCT."

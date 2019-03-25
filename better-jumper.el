@@ -57,6 +57,9 @@
 (defvar better-jumper--buffer-targets "\\*\\(new\\|scratch\\)\\*"
   "Regexp to match against `buffer-name' to determine whether it's a valid jump target.")
 
+(defvar-local better-jumper--jump-struct nil
+  "Jump struct for current buffer.")
+
 (cl-defstruct better-jumper-jump-list-struct
   ring
   (idx -1))
@@ -74,8 +77,8 @@
    (set-window-parameter window 'better-jumper-struct struct))
 
 (defun better-jumper--set-buffer-struct (buffer struct)
-  "TODO: Set jump struct for BUFFER to STRUCT."
-    nil)
+  "Set jump struct for BUFFER to STRUCT."
+   (setf (buffer-local-value 'better-jumper--jump-struct buffer) struct))
 
 (defun better-jumper--set-struct (context struct)
   "Set jump struct for CONTEXT to STRUCT."
@@ -92,11 +95,15 @@
          (frame-selected-window))))
 
 (defun better-jumper--get-buffer-struct (&optional buffer)
-  "TODO: Get current jump struct for BUFFER.
+  "Get current jump struct for BUFFER.
 Creates and adds jump struct if one does not exist. buffer if BUFFER parameter
 is missing."
-  (let* ((buffer (or buffer (current-buffer))))
-    nil))
+  (let* ((buffer (or buffer (current-buffer)))
+         (jump-struct (buffer-local-value 'better-jumper--jump-struct buffer)))
+    (unless jump-struct
+      (setq jump-struct (make-better-jumper-jump-list-struct))
+      (better-jumper--set-buffer-struct buffer jump-struct))
+    jump-struct))
 
 (defun better-jumper--get-window-struct (&optional window)
   "Get current jump struct for WINDOW.

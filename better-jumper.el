@@ -1,7 +1,28 @@
-;;; better-jumper.el --- description -*- lexical-binding: t; -*-
+;;; better-jumper.el --- configurable jump list -*- lexical-binding: t; -*-
+;;
+;; Author: Bryan Gilbert <http://github/gilbertw1>
+;; Maintainer: Bryan Gilbert <bryan@bryan.sh>
+;; Created: March 20, 2019
+;; Modified: March 26, 2019
+;; Version: 1.0.0
+;; Keywords: jump, history, evil
+;; Homepage: https://github.com/gilbertw1/better-jumper
+;; Package-Requires: ((emacs "25.1") (cl-lib "0.5"))
+;;
+;; This file is not part of GNU Emacs.
 
 ;;; Commentary:
-;;;  A configurable jump list implementation for Emacs.
+;;
+;; Better-jumper is configurable jump list implementation for Emacs that can be used
+;; to easily jump back to previous locations. That provides optional integration with
+;; evil.
+;;
+;; To enable globally:
+;;
+;;     (require 'better-jumper)
+;;
+;; See included README.md for more information.
+;;
 ;;; Code:
 
 (defgroup better-jumper nil

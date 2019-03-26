@@ -5,7 +5,7 @@
 ;; Created: March 20, 2019
 ;; Modified: March 26, 2019
 ;; Version: 1.0.0
-;; Keywords: jump, history, evil
+;; Keywords: convenience, jump, history, evil
 ;; Homepage: https://github.com/gilbertw1/better-jumper
 ;; Package-Requires: ((emacs "25.1") (cl-lib "0.5"))
 ;;

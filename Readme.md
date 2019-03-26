@@ -1,32 +1,47 @@
 # better-jumper
 
-A configurable jump list implementation for Emacs.
+A configurable jump list implementation for Emacs that can be used to easily
+jump back to previous locations.
 
-<br />
 
-## Usage
+# Usage
 
-Better jumper exposes the following functions
+## Getting started
+
+Once `better-jumper` has been loaded it is ready to start tracking jump history.
+Anytime `better-jumper-set-jump` is invoked the current location is added to
+either the window or buffer specific jump list (depending on the
+`better-jumper-context` setting). At any time the jump backward/forward
+functions can be used to navigate through the jump history.
+
+If you are an `evil` user then `better-jumper` can piggy back off of the built
+in jumplist implementation to track when jumps occur. The setting
+`better-jumper-use-evil-jump-advice` dictates this behavior and defaults to `t`.
+
+## Summary of interactive commands
 
 | Command                     | Description                                                         |
 |--------------------------   |---------------------------------------------------------------------|
-| better-jumper-set-jump      | Adds a new jump location to jump list using current buffer/position |
-| better-jumper-jump-backward | Jumps to back to previous location in jump list                     |
-| better-jumper-jump-forward  | Jumps forward to next location in jump list                         |
+| better-jumper-set-jump      | Add a new jump location to jump list using current buffer/position  |
+| better-jumper-jump-backward | Jump to back to previous location in jump list                      |
+| better-jumper-jump-forward  | Jump forward to next location in jump list                          |
+| better-jumper-get-jumps     | Get jump state for window or buffer                                 |
+| better-jumper-set-jumps     | Set jump state for window or buffer                                 |
 
-Configure as a drop in replacement for `evil-jump`:
+## Example keybinding
 
-```
+Configure the standard jump list navigation keybindings for evil/vim:
+
+```lisp
 (with-eval-after-load 'evil-maps
   (define-key evil-motion-state-map (kbd "C-o") 'better-jumper-jump-backward)
   (define-key evil-motion-state-map (kbd "<C-i>") 'better-jumper-jump-forward))
 ```
 
-<br />
 
-## Configuration Options
+# Configuration Options
 
-##### *Context* - `better-jumper-context`
+### Jump Context (`better-jumper-context`)
 
 This setting specifies the context in which jump lists are tracked. This can
 either be set to `'buffer` or `'window`. If the value is `'buffer` then a jump
@@ -34,9 +49,7 @@ list is maintained for each individual buffer. Conversly, if the value is
 `'window` then the jump list is maintained per window and will operate across
 buffers in that window.
 
-*NOTE* - `'buffer` context support is temporarily not working.
-
-##### *New Window Behavior* - `better-jumper-new-window-behavior`
+### New Window Behavior  (`better-jumper-new-window-behavior`)
 
 This setting specifies the behavior that will take place when a new window is
 created AND the current context is set to `'window`. This can be either set to
@@ -44,29 +57,30 @@ created AND the current context is set to `'window`. This can be either set to
 jump list will be copied to the new window. If the value is `'empty` then the
 new window's jump list will start empty.
 
-##### *Max Length* - `better-jumper-max-length`
+### Max Length  (`better-jumper-max-length`)
 
 This is a numeric value that dictate the maximum length that a jump list can
 grow to. If the length of a jump list exceeds this size then the oldest items in
 the list will be dropped.
 
-##### *Use Evil Jump Advice* - `better-jumper-use-evil-jump-advice`
+### Use Evil Jump Advice (`better-jumper-use-evil-jump-advice`)
 
 If non-nil better jumper will attach a piece of advice to the `evil-jump`
 function that will ensure that anytime a jump is added using `evil-jump` a
 corresponding jump will be added using `better-jumper`.
 
-<br />
 
-## Hooks
+# Hooks
 
-##### *Pre-jump Hook* - `better-jumper-pre-jump-hook`
+### Pre-jump Hook (`better-jumper-pre-jump-hook`)
 
-##### *Post-jump Hook* - `better-jumper-post-jump-hook`
+A hook that is invoked before a jump occurs.
 
-<br />
+### Post-jump Hook (`better-jumper-post-jump-hook`)
 
-## Comparison with `evil-jump`
+A hook that is invoked after a jump occurs.
+
+# Comparison with `evil-jump`
 
 This package was heavily inspired by `evil-jump` and initially was planned as a
 modification of or pull request to `evil`. It was primarily born out of the
@@ -76,8 +90,9 @@ provides more customization options as well as a few other core improvements.
 
 A few advantages of `better-jumper` are:
 
-* Properly isolates jump lists between `persp-mode` perspectives and saves the
-  jump lists to those perspectives.
+* Uses window persistent parameters to store jump lists. As a result
+  `better-jumper` properly works with `persp-mode` and any other feature that
+  manages window configurations.
 
 * True buffer specific jump lists. When instructed to not cross buffer
   boundaries `evil-jumper` still tracks jumps per window only limits the jumps

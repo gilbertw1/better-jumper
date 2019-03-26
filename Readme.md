@@ -41,7 +41,7 @@ Configure the standard jump list navigation keybindings for evil/vim:
 
 # Configuration Options
 
-### Jump Context (`better-jumper-context`)
+#### Jump Context (`better-jumper-context`)
 
 This setting specifies the context in which jump lists are tracked. This can
 either be set to `'buffer` or `'window`. If the value is `'buffer` then a jump
@@ -49,7 +49,7 @@ list is maintained for each individual buffer. Conversly, if the value is
 `'window` then the jump list is maintained per window and will operate across
 buffers in that window.
 
-### New Window Behavior  (`better-jumper-new-window-behavior`)
+#### New Window Behavior  (`better-jumper-new-window-behavior`)
 
 This setting specifies the behavior that will take place when a new window is
 created AND the current context is set to `'window`. This can be either set to
@@ -57,13 +57,13 @@ created AND the current context is set to `'window`. This can be either set to
 jump list will be copied to the new window. If the value is `'empty` then the
 new window's jump list will start empty.
 
-### Max Length  (`better-jumper-max-length`)
+#### Max Length  (`better-jumper-max-length`)
 
 This is a numeric value that dictate the maximum length that a jump list can
 grow to. If the length of a jump list exceeds this size then the oldest items in
 the list will be dropped.
 
-### Use Evil Jump Advice (`better-jumper-use-evil-jump-advice`)
+#### Use Evil Jump Advice (`better-jumper-use-evil-jump-advice`)
 
 If non-nil better jumper will attach a piece of advice to the `evil-jump`
 function that will ensure that anytime a jump is added using `evil-jump` a
@@ -72,11 +72,11 @@ corresponding jump will be added using `better-jumper`.
 
 # Hooks
 
-### Pre-jump Hook (`better-jumper-pre-jump-hook`)
+#### Pre-jump Hook (`better-jumper-pre-jump-hook`)
 
 A hook that is invoked before a jump occurs.
 
-### Post-jump Hook (`better-jumper-post-jump-hook`)
+#### Post-jump Hook (`better-jumper-post-jump-hook`)
 
 A hook that is invoked after a jump occurs.
 

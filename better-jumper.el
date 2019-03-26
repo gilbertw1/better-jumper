@@ -290,10 +290,10 @@ Cleans up deleted windows and copies history to newly created windows."
 
 (add-hook 'window-configuration-change-hook #'better-jumper--window-configuration-hook)
 
-(if better-jumper-use-evil-jump-advice
-    (with-eval-after-load 'evil
-      (defadvice evil-set-jump (before better-jumper activate)
-        (better-jumper-set-jump))))
+(with-eval-after-load 'evil
+  (defadvice evil-set-jump (before better-jumper activate)
+    (when better-jumper-use-evil-jump-advice
+      (better-jumper-set-jump))))
 
 (push '(better-jumper-struct . writable) window-persistent-parameters)
 

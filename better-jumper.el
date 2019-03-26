@@ -164,8 +164,7 @@ Uses the current context if CONTEXT is nil."
 Uses current context if CONTEXT is nil."
   (let ((jump-list (better-jumper--get-jump-list context)))
     (setq idx (+ idx shift))
-    (let* ((current-file-name (or (buffer-file-name) (buffer-name)))
-           (size (ring-length jump-list)))
+    (let* ((size (ring-length jump-list)))
       (when (and (< idx size) (>= idx 0))
         ;; actual jump
         (run-hooks 'better-jumper-pre-jump-hook)
@@ -281,10 +280,12 @@ The argument should be either a window or buffer depending on the context."
 
 (defun better-jumper--before-persp-deactivate (&rest args)
   "Save jump state when a perspective is deactivated. Ignore ARGS."
+  (ignore args)
   (setq better-jumper-switching-perspectives t))
 
 (defun better-jumper--on-persp-activate (&rest args)
   "Restore jump state when a perspective is activated. Ignore ARGS."
+  (ignore args)
   (setq better-jumper-switching-perspectives nil))
 
 (with-eval-after-load 'persp-mode
@@ -294,6 +295,7 @@ The argument should be either a window or buffer depending on the context."
 (defun better-jumper--window-configuration-hook (&rest args)
   "Run on window configuration change (Ignore ARGS).
 Cleans up deleted windows and copies history to newly created windows."
+  (ignore args)
   (when (and (eq better-jumper-context 'window)
              (eq better-jumper-new-window-behavior 'copy)
              (not better-jumper-switching-perspectives))

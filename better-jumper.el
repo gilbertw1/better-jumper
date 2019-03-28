@@ -104,8 +104,8 @@
 
 (defun better-jumper--copy-struct (struct)
   "Return a copy of STRUCT."
-  (let* ((jump-list (better-jumper--get-struct-jump-list struct))
-         (struct-copy (make-better-jumper-jump-list-struct)))
+  (let ((jump-list (better-jumper--get-struct-jump-list struct))
+        (struct-copy (make-better-jumper-jump-list-struct)))
     (setf (better-jumper-jump-list-struct-idx struct-copy) (better-jumper-jump-list-struct-idx struct))
     (setf (better-jumper-jump-list-struct-ring struct-copy) (ring-copy jump-list))
     struct-copy))
@@ -200,13 +200,13 @@ Uses current context if CONTEXT is nil."
 (defun better-jumper--push (&optional context)
   "Pushes the current cursor/file position to the jump list for CONTEXT.
 Uses current context if CONTEXT is nil."
-  (let* ((jump-list (better-jumper--get-jump-list context))
-         (file-name (buffer-file-name))
-         (buffer-name (buffer-name))
-         (current-pos (point))
-         (first-pos nil)
-         (first-file-name nil)
-         (excluded nil))
+  (let ((jump-list (better-jumper--get-jump-list context))
+        (file-name (buffer-file-name))
+        (buffer-name (buffer-name))
+        (current-pos (point))
+        (first-pos nil)
+        (first-file-name nil)
+        (excluded nil))
     (when (and (not file-name)
                  (string-match-p better-jumper--buffer-targets buffer-name))
         (setq file-name buffer-name))
@@ -288,7 +288,7 @@ The argument should be either a window or buffer depending on the context."
 (defun better-jumper-set-jumps (window-or-buffer jumps)
   "Set jumps to JUMPS for WINDOW-OR-BUFFER.
 The argument should be either a window or buffer depending on the context."
-  (let* ((struct-copy (better-jumper--copy-struct jumps)))
+  (let ((struct-copy (better-jumper--copy-struct jumps)))
     (better-jumper--set-struct window-or-buffer struct-copy)))
 
 ;;;;;;;;;;;;;;;;;;
@@ -316,17 +316,17 @@ Cleans up deleted windows and copies history to newly created windows."
   (when (and (eq better-jumper-context 'window)
              (eq better-jumper-new-window-behavior 'copy)
              (not better-jumper-switching-perspectives))
-    (let* ((window-list (window-list-1 nil nil t)))
-      (let* ((curr-window (selected-window))
-             (source-jump-struct (better-jumper--get-struct curr-window))
-             (source-jump-list (better-jumper--get-struct-jump-list source-jump-struct)))
-        (when (not (ring-empty-p source-jump-list))
-          (dolist (window window-list)
-            (let* ((target-jump-struct (better-jumper--get-struct window))
-                   (target-jump-list (better-jumper--get-struct-jump-list target-jump-struct)))
-              (when (ring-empty-p target-jump-list)
-                (setf (better-jumper-jump-list-struct-idx target-jump-struct) (better-jumper-jump-list-struct-idx source-jump-struct))
-                (setf (better-jumper-jump-list-struct-ring target-jump-struct) (ring-copy source-jump-list))))))))))
+    (let* ((window-list (window-list-1 nil nil t))
+           (curr-window (selected-window))
+           (source-jump-struct (better-jumper--get-struct curr-window))
+           (source-jump-list (better-jumper--get-struct-jump-list source-jump-struct)))
+      (unless (ring-empty-p source-jump-list))
+        (dolist (window window-list)
+          (let* ((target-jump-struct (better-jumper--get-struct window))
+                 (target-jump-list (better-jumper--get-struct-jump-list target-jump-struct)))
+            (when (ring-empty-p target-jump-list)
+              (setf (better-jumper-jump-list-struct-idx target-jump-struct) (better-jumper-jump-list-struct-idx source-jump-struct))
+              (setf (better-jumper-jump-list-struct-ring target-jump-struct) (ring-copy source-jump-list))))))))
 
 (add-hook 'window-configuration-change-hook #'better-jumper--window-configuration-hook)
 

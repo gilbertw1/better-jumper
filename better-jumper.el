@@ -84,6 +84,11 @@
   :type '(repeat string)
   :group 'better-jumper)
 
+(defcustom better-jumper-buffer-savehist-size 20
+  "The number of buffers to save the jump ring for."
+  :type 'integer
+  :group 'better-jumper)
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defvar better-jumper--jumping nil
@@ -98,6 +103,9 @@
 (defvar-local better-jumper--jump-struct nil
   "Jump struct for current buffer.")
 
+(defvar-local better-jumper--marker-table nil
+  "Marker table for current buffer.")
+
 (cl-defstruct better-jumper-jump-list-struct
   ring
   (idx -1))
@@ -109,6 +117,13 @@
     (setf (better-jumper-jump-list-struct-idx struct-copy) (better-jumper-jump-list-struct-idx struct))
     (setf (better-jumper-jump-list-struct-ring struct-copy) (ring-copy jump-list))
     struct-copy))
+
+(defun better-jumper--get-current-context ()
+  "Get current context item. Either current window or buffer."
+  (cond ((eq better-jumper-context 'buffer)
+         (current-buffer))
+        ((eq better-jumper-context 'window)
+         (frame-selected-window))))
 
 (defun better-jumper--set-window-struct (window struct)
   "Set jump struct for WINDOW to STRUCT."
@@ -125,16 +140,9 @@
         ((eq better-jumper-context 'window)
          (better-jumper--set-window-struct context struct))))
 
-(defun better-jumper--get-current-context ()
-  "Get current context item. Either current window or buffer."
-  (cond ((eq better-jumper-context 'buffer)
-         (current-buffer))
-        ((eq better-jumper-context 'window)
-         (frame-selected-window))))
-
 (defun better-jumper--get-buffer-struct (&optional buffer)
   "Get current jump struct for BUFFER.
-Creates and adds jump struct if one does not exist. buffer if BUFFER parameter
+Creates and sets jump struct if one does not exist. buffer if BUFFER parameter
 is missing."
   (let* ((buffer (or buffer (current-buffer)))
          (jump-struct (buffer-local-value 'better-jumper--jump-struct buffer)))
@@ -145,7 +153,7 @@ is missing."
 
 (defun better-jumper--get-window-struct (&optional window)
   "Get current jump struct for WINDOW.
-Creates and adds jump struct if one does not exist. buffer if WINDOW parameter
+Creates and sets jump struct if one does not exist. buffer if WINDOW parameter
 is missing."
   (let* ((window (or window (frame-selected-window)))
          (jump-struct (window-parameter window 'better-jumper-struct)))
@@ -156,11 +164,64 @@ is missing."
 
 (defun better-jumper--get-struct (&optional context)
   "Get current jump struct for CONTEXT.
-Creates and adds jump struct if one does not exist. Uses current window or
+Creates and sets jump struct if one does not exist. Uses current window or
 buffer if CONTEXT parameter is missing."
   (if (eq better-jumper-context 'buffer)
       (better-jumper--get-buffer-struct context)
     (better-jumper--get-window-struct context)))
+
+(defun better-jumper--make-key ()
+  "Generate random unique key."
+  (let ((key "")
+        (alnum "abcdefghijklmnopqrstuvwxyz0123456789"))
+    (dotimes (_ 6 key)
+      (let* ((i (% (abs (random)) (length alnum))))
+        (setq key (concat key (substring alnum i (1+ i))))))))
+
+(defun better-jumper--set-window-marker-table (window table)
+  "Set marker table for WINDOW to TABLE."
+  (set-window-parameter window 'better-jumper-marker-table table))
+
+(defun better-jumper--set-buffer-marker-table (buffer table)
+  "Set marker table for BUFFER to TABLE."
+  (setf (buffer-local-value 'better-jumper--marker-table buffer) table))
+
+(defun better-jumper--set-marker-table (context table)
+  "Set marker table for CONTEXT to TABLE."
+  (cond ((eq better-jumper-context 'buffer)
+         (better-jumper--set-buffer-marker-table context table))
+        ((eq better-jumper-context 'window)
+         (better-jumper--set-window-marker-table context table))))
+
+(defun better-jumper--get-buffer-marker-table (&optional buffer)
+  "Get current marker table for BUFFER.
+Creates and sets marker table if one does not exist. buffer if BUFFER parameter
+is missing."
+  (let* ((buffer (or buffer (current-buffer)))
+         (marker-table (buffer-local-value 'better-jumper--marker-map buffer)))
+    (unless marker-table
+      (setq marker-table (make-hash-table))
+      (better-jumper--set-marker-table buffer marker-table))
+    marker-table))
+
+(defun better-jumper--get-window-marker-table (&optional window)
+  "Get marker table for WINDOW.
+Creates and sets marker table if one does not exist. buffer if WINDOW parameter
+is missing."
+  (let* ((window (or window (frame-selected-window)))
+         (marker-table (window-parameter window 'better-jumper-marker-table)))
+    (unless marker-table
+      (setq marker-table (make-hash-table))
+      (better-jumper--set-marker-table window marker-table))
+    marker-table))
+
+(defun better-jumper--get-marker-table (&optional context)
+  "Get current marker map for CONTEXT.
+Creates and adds marker table if one does not exist. Uses current window or
+buffer if CONTEXT parameter is missing."
+  (if (eq better-jumper-context 'buffer)
+      (better-jumper--get-buffer-marker-table context)
+    (better-jumper--get-window-marker-table context)))
 
 (defun better-jumper--get-struct-jump-list (struct)
   "Gets and potentially initialize jumps for STRUCT."
@@ -185,15 +246,21 @@ Uses current context if CONTEXT is nil."
       (when (and (< idx size) (>= idx 0))
         ;; actual jump
         (run-hooks 'better-jumper-pre-jump-hook)
-        (let* ((place (ring-ref jump-list idx))
-               (pos (car place))
-               (file-name (cadr place)))
+        (let* ((marker-table (better-jumper--get-marker-table context))
+               (place (ring-ref jump-list idx))
+               (file-name (nth 0 place))
+               (pos (nth 1 place))
+               (marker-key (nth 2 place))
+               (marker (gethash marker-key marker-table)))
           (setq better-jumper--jumping t)
           (if (string-match-p better-jumper--buffer-targets file-name)
               (switch-to-buffer file-name)
             (find-file file-name))
           (setq better-jumper--jumping nil)
-          (goto-char pos)
+          (if marker
+              (goto-char marker)
+            (goto-char pos)
+            (puthash marker-key (point-marker) marker-table))
           (setf (better-jumper-jump-list-struct-idx (better-jumper--get-struct context)) idx)
           (run-hooks 'better-jumper-post-jump-hook))))))
 
@@ -201,10 +268,12 @@ Uses current context if CONTEXT is nil."
   "Pushes the current cursor/file position to the jump list for CONTEXT.
 Uses current context if CONTEXT is nil."
   (let ((jump-list (better-jumper--get-jump-list context))
+        (marker-table (better-jumper--get-marker-table context))
         (file-name (buffer-file-name))
         (buffer-name (buffer-name))
-        (current-pos (point))
-        (first-pos nil)
+        (current-marker (point-marker))
+        (current-point (point))
+        (first-point nil)
         (first-file-name nil)
         (excluded nil))
     (when (and (not file-name)
@@ -216,11 +285,13 @@ Uses current context if CONTEXT is nil."
             (setq excluded t)))
         (unless excluded
           (unless (ring-empty-p jump-list)
-            (setq first-pos (car (ring-ref jump-list 0)))
-            (setq first-file-name (car (cdr (ring-ref jump-list 0)))))
-          (unless (and (equal first-pos current-pos)
+            (setq first-point (nth 1 (ring-ref jump-list 0)))
+            (setq first-file-name (nth 2 (ring-ref jump-list 0))))
+          (unless (and (equal first-point current-point)
                        (equal first-file-name file-name))
-            (ring-insert jump-list `(,current-pos ,file-name)))))))
+            (let ((key (better-jumper--make-key)))
+              (puthash key current-marker marker-table)
+              (ring-insert jump-list `(,file-name ,current-point ,key))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;   PUBLIC FUNCTIONS    ;;;

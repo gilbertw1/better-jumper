@@ -42,6 +42,8 @@
 ;;
 ;;; Code:
 
+(require 'seq)
+
 (defgroup better-jumper nil
   "Better jumper configuration options."
   :prefix "better-jumper"
@@ -69,6 +71,16 @@
   :type 'boolean
   :group 'better-jumper)
 
+(defcustom better-jumper-use-savehist nil
+  "Use savehist to save jump history. Currently Buffer only."
+  :type 'boolean
+  :group 'better-jumper)
+
+(defcustom better-jumper-buffer-savehist-size 20
+  "The number of buffers to save the jump ring for."
+  :type 'integer
+  :group 'better-jumper)
+
 (defcustom better-jumper-pre-jump-hook nil
   "Hooks to run just before jumping to a location in the jump list."
   :type 'hook
@@ -84,12 +96,10 @@
   :type '(repeat string)
   :group 'better-jumper)
 
-(defcustom better-jumper-buffer-savehist-size 20
-  "The number of buffers to save the jump ring for."
-  :type 'integer
-  :group 'better-jumper)
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defvar savehist-additional-variables)
 
 (defvar better-jumper--jumping nil
   "Flag inidicating jump in progress to prevent recording unnecessary jumps.")
@@ -99,6 +109,9 @@
 
 (defvar better-jumper--buffer-targets "\\*\\(new\\|scratch\\)\\*"
   "Regexp to match against `buffer-name' to determine whether it's a valid jump target.")
+
+(defvar better-jumper-savehist nil
+  "History of `better-jumper' jumps that are persisted with `savehist'.")
 
 (defvar-local better-jumper--jump-struct nil
   "Jump struct for current buffer.")
@@ -140,6 +153,15 @@
         ((eq better-jumper-context 'window)
          (better-jumper--set-window-struct context struct))))
 
+(defun better-jumper--find-buffer-struct-savehist (buffer)
+  "Look for BUFFER jump history in savehist variable."
+  (let ((filename (buffer-file-name buffer)))
+    (when filename
+      (nth 1
+           (seq-find (lambda (e)
+                       (equal (nth 0 e) filename))
+                     better-jumper-savehist)))))
+
 (defun better-jumper--get-buffer-struct (&optional buffer)
   "Get current jump struct for BUFFER.
 Creates and sets jump struct if one does not exist. buffer if BUFFER parameter
@@ -147,8 +169,10 @@ is missing."
   (let* ((buffer (or buffer (current-buffer)))
          (jump-struct (buffer-local-value 'better-jumper--jump-struct buffer)))
     (unless jump-struct
-      (setq jump-struct (make-better-jumper-jump-list-struct))
-      (better-jumper--set-buffer-struct buffer jump-struct))
+      (setq jump-struct (better-jumper--find-buffer-struct-savehist buffer))
+      (unless jump-struct
+        (setq jump-struct (make-better-jumper-jump-list-struct))
+        (better-jumper--set-buffer-struct buffer jump-struct)))
     jump-struct))
 
 (defun better-jumper--get-window-struct (&optional window)
@@ -198,7 +222,7 @@ buffer if CONTEXT parameter is missing."
 Creates and sets marker table if one does not exist. buffer if BUFFER parameter
 is missing."
   (let* ((buffer (or buffer (current-buffer)))
-         (marker-table (buffer-local-value 'better-jumper--marker-map buffer)))
+         (marker-table (buffer-local-value 'better-jumper--marker-table buffer)))
     (unless marker-table
       (setq marker-table (make-hash-table))
       (better-jumper--set-marker-table buffer marker-table))
@@ -367,12 +391,12 @@ The argument should be either a window or buffer depending on the context."
 ;;;;;;;;;;;;;;;;;;
 
 (defun better-jumper--before-persp-deactivate (&rest args)
-  "Save jump state when a perspective is deactivated. Ignore ARGS."
+  "Indicate that perspective switch is in progress. Ignore ARGS."
   (ignore args)
   (setq better-jumper-switching-perspectives t))
 
 (defun better-jumper--on-persp-activate (&rest args)
-  "Restore jump state when a perspective is activated. Ignore ARGS."
+  "Indicate that perspective switch is completed. Ignore ARGS."
   (ignore args)
   (setq better-jumper-switching-perspectives nil))
 
@@ -400,6 +424,58 @@ Cleans up deleted windows and copies history to newly created windows."
               (setf (better-jumper-jump-list-struct-ring target-jump-struct) (ring-copy source-jump-list))))))))
 
 (add-hook 'window-configuration-change-hook #'better-jumper--window-configuration-hook)
+
+
+;;;;;;;;;;;;;;;;;;;
+;;;   SAVEHIST  ;;;
+;;;;;;;;;;;;;;;;;;;
+
+(defun better-jumper--load-savehist ()
+  "Load savehist state if savehist is enabled."
+  (when (and better-jumper-use-savehist
+             (eq better-jumper-context 'buffer))
+    (add-to-list 'savehist-additional-variables 'better-jumper-savehist)
+    (dolist (entry better-jumper-savehist)
+      (let* ((buffer-name (nth 0 entry))
+             (struct (nth 1 entry))
+             (found-buffer (seq-find (lambda (b)
+                                       (or (eq buffer-name (buffer-file-name b))
+                                           (eq buffer-name (buffer-name b))))
+                                     (buffer-list))))
+        (when found-buffer
+          (better-jumper-set-jumps found-buffer struct)))))
+  (add-hook 'savehist-save-hook #'better-jumper--sync-savehist)
+  (remove-hook 'savehist-mode-hook #'better-jumper--load--savehist))
+
+(defun better-jumper--is-local-file-buffer (buffer)
+  "Return non-nil if BUFFER refers to a local file that exists."
+  (let ((filename (buffer-file-name buffer)))
+    (and filename
+         (not (file-remote-p filename))
+         (file-exists-p filename))))
+
+(defun better-jumper--sync-savehist ()
+  "Store current jump state in savehist variable if savehist is enabled."
+  (when (and better-jumper-use-savehist
+             (eq better-jumper-context 'buffer))
+    (let ((buffers (seq-take
+                    (seq-filter #'better-jumper--is-local-file-buffer
+                                (buffer-list))
+                    better-jumper-buffer-savehist-size)))
+      (setq better-jumper-savehist
+            (mapcar #'(lambda (buffer)
+                        (let ((filename (buffer-file-name buffer))
+                              (struct (better-jumper--copy-struct (better-jumper--get-buffer-struct buffer))))
+                          (list filename struct)))
+                    buffers)))))
+
+(if (bound-and-true-p savehist-loaded)
+    (better-jumper--load-savehist)
+  (add-hook 'savehist-mode-hook #'better-jumper--load-savehist))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;   EVIL INTEGRATION  ;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (with-eval-after-load 'evil
   (defadvice evil-set-jump (before better-jumper activate)

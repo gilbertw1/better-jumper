@@ -38,7 +38,6 @@ Configure the standard jump list navigation keybindings for evil/vim:
   (define-key evil-motion-state-map (kbd "<C-i>") 'better-jumper-jump-forward))
 ```
 
-
 # Configuration Options
 
 #### Jump Context (`better-jumper-context`)
@@ -69,6 +68,17 @@ If non-nil better jumper will attach a piece of advice to the `evil-jump`
 function that will ensure that anytime a jump is added using `evil-jump` a
 corresponding jump will be added using `better-jumper`.
 
+#### better-jumper-use-savehist (`better-jumper-use-savehist`)
+
+If non-nil better jumper will use savehist to save jump history. This is
+currently only implemented for the `'buffer` context. Persistent window
+parameters are used to save and restore jump history for windows.
+
+#### better-jumper-buffer-savehist-size (`better-jumper-buffer-savehist-size`)
+
+This number dictates how many of the most recent buffers should have their jump
+state saved to the savehist file when savehist is enabled the the context is set
+to `'buffer`.
 
 # Hooks
 

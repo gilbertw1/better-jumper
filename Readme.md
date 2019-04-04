@@ -17,6 +17,8 @@ functions can be used to navigate through the jump history.
 If you are an `evil` user then `better-jumper` can piggy back off of the built
 in jumplist implementation to track when jumps occur. The setting
 `better-jumper-use-evil-jump-advice` dictates this behavior and defaults to `t`.
+Note that `better-jumper` does not interact with or alter evil's jump list in
+any way.
 
 ## Summary of interactive commands
 
@@ -47,6 +49,13 @@ either be set to `'buffer` or `'window`. If the value is `'buffer` then a jump
 list is maintained for each individual buffer. Conversly, if the value is
 `'window` then the jump list is maintained per window and will operate across
 buffers in that window.
+
+While in the `'window` context, jump lists are stored as persistent window
+parameters and can be saved and restored along with the window configuration
+using something like `desktop` or `persp-mode`. This is the default context.
+
+While in the `'buffer` context, jump lists are maintained using buffer-local
+variables and can optionally by saved using `savehist`.
 
 #### New Window Behavior  (`better-jumper-new-window-behavior`)
 
@@ -110,3 +119,15 @@ A few advantages of `better-jumper` are:
   
 * Configurable new window behavior. `evil-jumper` ALWAYS copies the jump list
   from the previously selected window to any newly created window.
+
+# Caveats
+
+* Jump locations are stored as `marker`s so they will maintain a more accurate
+  location in the buffer. However, due to the fact thay markers can't be
+  serialized they are down converted to simple buffer positions when saved
+  either via window configuration or savehist.
+  
+* Currently `savehist` support is only limited to the `'buffer` context. When
+  running in the `'window` context, the jump list is stored as a persistent
+  window parameter and is intended to be saved using alongside the window
+  configuration using somethinig like `desktop` or `persp-mode`.

@@ -309,8 +309,8 @@ Uses current context if CONTEXT is nil."
             (setq excluded t)))
         (unless excluded
           (unless (ring-empty-p jump-list)
-            (setq first-point (nth 1 (ring-ref jump-list 0)))
-            (setq first-file-name (nth 2 (ring-ref jump-list 0))))
+            (setq first-file-name (nth 0 (ring-ref jump-list 0)))
+            (setq first-point (nth 1 (ring-ref jump-list 0))))
           (unless (and (equal first-point current-point)
                        (equal first-file-name file-name))
             (let ((key (better-jumper--make-key)))

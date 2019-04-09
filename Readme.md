@@ -123,7 +123,7 @@ A few advantages of `better-jumper` are:
 # Caveats
 
 * Jump locations are stored as `marker`s so they will maintain a more accurate
-  location in the buffer. However, due to the fact thay markers can't be
+  location in the buffer. However, due to the fact that markers can't be
   serialized they are down converted to simple buffer positions when saved
   either via window configuration or savehist.
   

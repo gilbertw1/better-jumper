@@ -281,7 +281,7 @@ Uses current context if CONTEXT is nil."
               (switch-to-buffer file-name)
             (find-file file-name))
           (setq better-jumper--jumping nil)
-          (if marker
+          (if (and marker (marker-position marker))
               (goto-char marker)
             (goto-char pos)
             (puthash marker-key (point-marker) marker-table))

@@ -7,7 +7,7 @@
 ;; Version: 1.0.0
 ;; Keywords: convenience, jump, history, evil
 ;; Homepage: https://github.com/gilbertw1/better-jumper
-;; Package-Requires: ((emacs "25.1") (cl-lib "0.5"))
+;; Package-Requires: ((emacs "25.1"))
 ;;
 ;; This file is not part of GNU Emacs.
 
@@ -37,6 +37,7 @@
 ;; To enable globally:
 ;;
 ;;     (require 'better-jumper)
+;;     (better-jumper-mode 1)
 ;;
 ;; See included README.md for more information.
 ;;
@@ -47,7 +48,7 @@
 (defgroup better-jumper nil
   "Better jumper configuration options."
   :prefix "better-jumper"
-  :group 'jump)
+  :group 'convenience)
 
 (defcustom better-jumper-context 'window
   "Determines the context that better jumper operates within."
@@ -96,6 +97,12 @@
   :type '(repeat string)
   :group 'better-jumper)
 
+(defcustom better-jumper-disabled-modes
+  '(org-agenda-mode magit-mode git-rebase-mode)
+  "A list of modes in which the global better-jumper minor mode will not be turned on."
+  :group 'better-jumper
+  :type  '(list symbol))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -133,10 +140,9 @@
 
 (defun better-jumper--get-current-context ()
   "Get current context item. Either current window or buffer."
-  (cond ((eq better-jumper-context 'buffer)
-         (current-buffer))
-        ((eq better-jumper-context 'window)
-         (frame-selected-window))))
+  (pcase better-jumper-context
+    (`buffer (current-buffer))
+    (`window (frame-selected-window))))
 
 (defun better-jumper--set-window-struct (window struct)
   "Set jump struct for WINDOW to STRUCT."
@@ -148,10 +154,9 @@
 
 (defun better-jumper--set-struct (context struct)
   "Set jump struct for CONTEXT to STRUCT."
-  (cond ((eq better-jumper-context 'buffer)
-         (better-jumper--set-buffer-struct context struct))
-        ((eq better-jumper-context 'window)
-         (better-jumper--set-window-struct context struct))))
+  (pcase better-jumper-context
+      (`buffer (better-jumper--set-buffer-struct context struct))
+      (`window (better-jumper--set-window-struct context struct))))
 
 (defun better-jumper--find-buffer-struct-savehist (buffer)
   "Look for BUFFER jump history in savehist variable."
@@ -212,10 +217,9 @@ buffer if CONTEXT parameter is missing."
 
 (defun better-jumper--set-marker-table (context table)
   "Set marker table for CONTEXT to TABLE."
-  (cond ((eq better-jumper-context 'buffer)
-         (better-jumper--set-buffer-marker-table context table))
-        ((eq better-jumper-context 'window)
-         (better-jumper--set-window-marker-table context table))))
+  (pcase better-jumper-context
+      (`buffer (better-jumper--set-buffer-marker-table context table))
+      (`window (better-jumper--set-window-marker-table context table))))
 
 (defun better-jumper--get-buffer-marker-table (&optional buffer)
   "Get current marker table for BUFFER.
@@ -408,7 +412,8 @@ The argument should be either a window or buffer depending on the context."
   "Run on window configuration change (Ignore ARGS).
 Cleans up deleted windows and copies history to newly created windows."
   (ignore args)
-  (when (and (eq better-jumper-context 'window)
+  (when (and better-jumper-mode
+             (eq better-jumper-context 'window)
              (eq better-jumper-new-window-behavior 'copy)
              (not better-jumper-switching-perspectives))
     (let* ((window-list (window-list-1 nil nil t))
@@ -432,7 +437,8 @@ Cleans up deleted windows and copies history to newly created windows."
 
 (defun better-jumper--load-savehist ()
   "Load savehist state if savehist is enabled."
-  (when (and better-jumper-use-savehist
+  (when (and better-jumper-mode
+             better-jumper-use-savehist
              (eq better-jumper-context 'buffer))
     (add-to-list 'savehist-additional-variables 'better-jumper-savehist)
     (dolist (entry better-jumper-savehist)
@@ -456,7 +462,8 @@ Cleans up deleted windows and copies history to newly created windows."
 
 (defun better-jumper--sync-savehist ()
   "Store current jump state in savehist variable if savehist is enabled."
-  (when (and better-jumper-use-savehist
+  (when (and better-jumper-mode
+             better-jumper-use-savehist
              (eq better-jumper-context 'buffer))
     (let ((buffers (seq-take
                     (seq-filter #'better-jumper--is-local-file-buffer
@@ -479,10 +486,36 @@ Cleans up deleted windows and copies history to newly created windows."
 
 (with-eval-after-load 'evil
   (defadvice evil-set-jump (before better-jumper activate)
-    (when better-jumper-use-evil-jump-advice
+    (when (and better-jumper-local-mode better-jumper-use-evil-jump-advice)
       (better-jumper-set-jump))))
 
 (push '(better-jumper-struct . writable) window-persistent-parameters)
+
+;;;;;;;;;;;;;;;;;;;;;
+;;;   MINOR MODE  ;;;
+;;;;;;;;;;;;;;;;;;;;;
+
+;;;###autoload
+(defun turn-on-better-jumper-mode ()
+  "Enable better-jumper-mode in the current buffer."
+  (unless (or (minibufferp)
+              (apply #'derived-mode-p better-jumper-disabled-modes))
+    (better-jumper-local-mode +1)))
+
+;;;###autoload
+(defun turn-off-better-jumper-mode ()
+  "Disable `better-jumper-local-mode' in the current buffer."
+  (better-jumper-local-mode -1))
+
+;;;###autoload
+(define-minor-mode better-jumper-local-mode
+  "better-jumper minor mode."
+  :lighter " better-jumper"
+  :group 'better-jumper)
+
+;;;###autoload
+(define-globalized-minor-mode better-jumper-mode
+  better-jumper-local-mode turn-on-better-jumper-mode)
 
 (provide 'better-jumper)
 ;;; better-jumper.el ends here

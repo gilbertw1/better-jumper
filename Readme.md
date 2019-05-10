@@ -6,6 +6,38 @@ jump back to previous locations.
 
 # Usage
 
+## Install
+
+Better-jumper is available on MELPA.
+
+`M-x package-install better-jumper`
+
+```emacs-lisp
+(require 'better-jumper)
+```
+
+`better-jumper` comes with two global modes: `better-jumper-mode` and
+`better-jumper-override-mode`, and two local modes: `better-jumper-local-mode` and
+`better-jumper-override-local-mode`.
+
+You can either a) enable one or both globally:
+
+```elisp
+(better-jumper-mode +1)
+
+;; and disable in specific modes
+(push 'python-mode better-jumper-disabled-modes)
+
+;; or disable it manually
+(add-hook 'python-mode-hook #'turn-off-better-jumper-mode)
+```
+
+Or b) enable one or both locally, where you need it:
+
+```elisp
+(add-hook 'python-mode-hook 'turn-on-better-jumper-mode
+```
+
 ## Getting started
 
 Once `better-jumper` has been loaded it is ready to start tracking jump history.

@@ -451,7 +451,7 @@ Cleans up deleted windows and copies history to newly created windows."
         (when found-buffer
           (better-jumper-set-jumps found-buffer struct)))))
   (add-hook 'savehist-save-hook #'better-jumper--sync-savehist)
-  (remove-hook 'savehist-mode-hook #'better-jumper--load--savehist))
+  (remove-hook 'savehist-mode-hook #'better-jumper--load-savehist))
 
 (defun better-jumper--is-local-file-buffer (buffer)
   "Return non-nil if BUFFER refers to a local file that exists."

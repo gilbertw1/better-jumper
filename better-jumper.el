@@ -486,7 +486,8 @@ Cleans up deleted windows and copies history to newly created windows."
 
 (with-eval-after-load 'evil
   (defadvice evil-set-jump (before better-jumper activate)
-    (when (and better-jumper-local-mode better-jumper-use-evil-jump-advice)
+    (when (and (bound-and-true-p better-jumper-local-mode)
+               better-jumper-use-evil-jump-advice)
       (better-jumper-set-jump))))
 
 (push '(better-jumper-struct . writable) window-persistent-parameters)

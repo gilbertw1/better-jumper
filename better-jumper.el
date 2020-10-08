@@ -470,7 +470,7 @@ Cleans up deleted windows and copies history to newly created windows."
         (when found-buffer
           (better-jumper-set-jumps found-buffer struct)))))
   (add-hook 'savehist-save-hook #'better-jumper--sync-savehist)
-  (remove-hook 'savehist-mode-hook #'better-jumper--load--savehist))
+  (remove-hook 'savehist-mode-hook #'better-jumper--load-savehist))
 
 (defun better-jumper--is-local-file-buffer (buffer)
   "Return non-nil if BUFFER refers to a local file that exists."
@@ -505,7 +505,7 @@ Cleans up deleted windows and copies history to newly created windows."
 
 (with-eval-after-load 'evil
   (defadvice evil-set-jump (before better-jumper activate)
-    (when (and better-jumper-local-mode
+    (when (and (bound-and-true-p better-jumper-local-mode)
                better-jumper-use-evil-jump-advice
                (not (equal better-jump--last-jump-pos (point))))
       (better-jumper-set-jump))))

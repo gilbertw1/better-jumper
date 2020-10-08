@@ -62,6 +62,12 @@
                  (other :tag "Copy last window" copy))
   :group 'better-jumper)
 
+(defcustom better-jumper-add-jump-behavior 'append
+  "Determines the behavior when adding a new jump."
+  :type '(choice (const :tag "Replace remaining items in jump list" replace)
+                 (other :tag "Append to end of jump list" append))
+  :group 'better-jumper)
+
 (defcustom better-jumper-max-length 100
   "The maximum number of jumps to keep track of."
   :type 'integer
@@ -339,8 +345,9 @@ POS defaults to point."
     (let* ((struct (better-jumper--get-struct))
            (jump-list (better-jumper--get-struct-jump-list struct))
            (idx (better-jumper-jump-list-struct-idx struct)))
-      (cl-loop repeat idx
-               do (ring-remove jump-list))
+      (when (eq better-jumper-add-jump-behavior 'replace)
+        (cl-loop repeat idx
+                 do (ring-remove jump-list 0)))
       (setf (better-jumper-jump-list-struct-idx struct) -1))
     (save-excursion
       (when pos

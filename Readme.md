@@ -35,7 +35,7 @@ You can either a) enable one or both globally:
 Or b) enable one or both locally, where you need it:
 
 ```elisp
-(add-hook 'python-mode-hook 'turn-on-better-jumper-mode
+(add-hook 'python-mode-hook #'turn-on-better-jumper-mode)
 ```
 
 ## Getting started
@@ -89,13 +89,22 @@ using something like `desktop` or `persp-mode`. This is the default context.
 While in the `'buffer` context, jump lists are maintained using buffer-local
 variables and can optionally by saved using `savehist`.
 
-#### New Window Behavior  (`better-jumper-new-window-behavior`)
+#### New Window Behavior (`better-jumper-new-window-behavior`)
 
 This setting specifies the behavior that will take place when a new window is
 created AND the current context is set to `'window`. This can be either set to
 `'copy` or `'empty`. If the value is `'copy` then the last selected window's
 jump list will be copied to the new window. If the value is `'empty` then the
 new window's jump list will start empty.
+
+#### Add Jump Behavior (`better-jumper-add-jump-behavior`)
+
+This setting specifies how the jump list is affected when a new jump is added.
+If the value is set to `'append` then new items are always added to the end
+of the jump list regardless of the current position. If the value is set to
+`replace`, then if the any jumps newer than the current position in the jump
+list will be replaced. I.e. If a user jumps back three times then adds a new
+jump, those three jumps will be replaced by the new jump in the list.
 
 #### Max Length  (`better-jumper-max-length`)
 

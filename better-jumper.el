@@ -126,6 +126,9 @@
 (defvar better-jumper-savehist nil
   "History of `better-jumper' jumps that are persisted with `savehist'.")
 
+(defvar better-jump--last-jump-pos nil
+  "Keep track of the end location of the last jump.")
+
 (defvar-local better-jumper--jump-struct nil
   "Jump struct for current buffer.")
 
@@ -290,12 +293,13 @@ Uses current context if CONTEXT is nil."
           (if (string-match-p better-jumper--buffer-targets file-name)
               (switch-to-buffer file-name)
             (find-file file-name))
-          (setq better-jumper--jumping nil)
           (if (and marker (marker-position marker))
               (goto-char marker)
             (goto-char pos)
             (puthash marker-key (point-marker) marker-table))
           (setf (better-jumper-jump-list-struct-idx (better-jumper--get-struct context)) idx)
+          (setq better-jump--last-jump-pos (point))
+          (setq better-jumper--jumping nil)
           (run-hooks 'better-jumper-post-jump-hook))))))
 
 (defun better-jumper--push (&optional context)
@@ -381,6 +385,14 @@ If COUNT is nil then defaults to 1."
           (setf (better-jumper-jump-list-struct-idx struct) 0)
           (better-jumper--push))
         (better-jumper--jump idx (- 0 count))))
+
+;;;###autoload
+(defun better-jumper-jump-newest ()
+  "Jump forward to newest entry in jump list."
+  (interactive)
+  (let (struct (better-jumper--get-struct))
+    (setf (better-jumper-jump-list-struct-idx struct) 0)
+    (better-jumper--jump 0 0)))
 
 ;;;###autoload
 (defun better-jumper-get-jumps (window-or-buffer)
@@ -493,7 +505,9 @@ Cleans up deleted windows and copies history to newly created windows."
 
 (with-eval-after-load 'evil
   (defadvice evil-set-jump (before better-jumper activate)
-    (when (and better-jumper-local-mode better-jumper-use-evil-jump-advice)
+    (when (and better-jumper-local-mode
+               better-jumper-use-evil-jump-advice
+               (not (equal better-jump--last-jump-pos (point))))
       (better-jumper-set-jump))))
 
 (push '(better-jumper-struct . writable) window-persistent-parameters)

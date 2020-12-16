@@ -395,19 +395,32 @@ If COUNT is nil then defaults to 1."
     (better-jumper--jump 0 0)))
 
 ;;;###autoload
-(defun better-jumper-get-jumps (window-or-buffer)
+(defun better-jumper-clear-jumps (&optional window-or-buffer)
+  "Clears jump list for WINDOW-OR-BUFFER.
+WINDOW-OR-BUFFER should be either a window or buffer depending on the
+context and will default to current context if not provided."
+  (let* ((context (or window-or-buffer (better-jumper--get-current-context))))
+    (better-jumper--set-struct context (make-better-jumper-jump-list-struct))))
+
+;;;###autoload
+(defun better-jumper-get-jumps (&optional window-or-buffer)
   "Get jumps for WINDOW-OR-BUFFER.
-The argument should be either a window or buffer depending on the context."
-  (let* ((struct (better-jumper--get-struct window-or-buffer))
+WINDOW-OR-BUFFER should be either a window or buffer depending on the
+context and will default to current context if not provided."
+  (let* ((context (or window-or-buffer (better-jumper--get-current-context)))
+         (struct (better-jumper--get-struct context))
          (struct-copy (better-jumper--copy-struct struct)))
     struct-copy))
 
 ;;;###autoload
-(defun better-jumper-set-jumps (window-or-buffer jumps)
+(defun better-jumper-set-jumps (jumps &optional window-or-buffer)
   "Set jumps to JUMPS for WINDOW-OR-BUFFER.
-The argument should be either a window or buffer depending on the context."
-  (let ((struct-copy (better-jumper--copy-struct jumps)))
-    (better-jumper--set-struct window-or-buffer struct-copy)))
+WINDOW-OR-BUFFER should be either a window or buffer depending on the
+context and will default to current context if not provided."
+  (let ((context (or window-or-buffer (better-jumper--get-current-context)))
+        (struct-copy (better-jumper--copy-struct jumps)))
+    (better-jumper--set-struct context struct-copy)))
+
 
 ;;;;;;;;;;;;;;;;;;
 ;;;   HOOKS    ;;;

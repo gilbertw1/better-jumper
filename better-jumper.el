@@ -481,7 +481,7 @@ Cleans up deleted windows and copies history to newly created windows."
                                            (eq buffer-name (buffer-name b))))
                                      (buffer-list))))
         (when found-buffer
-          (better-jumper-set-jumps found-buffer struct)))))
+          (better-jumper-set-jumps struct found-buffer)))))
   (add-hook 'savehist-save-hook #'better-jumper--sync-savehist)
   (remove-hook 'savehist-mode-hook #'better-jumper--load-savehist))
 

@@ -155,17 +155,17 @@
 
 (defun better-jumper--set-window-struct (window struct)
   "Set jump struct for WINDOW to STRUCT."
-   (set-window-parameter window 'better-jumper-struct struct))
+  (set-window-parameter window 'better-jumper-struct struct))
 
 (defun better-jumper--set-buffer-struct (buffer struct)
   "Set jump struct for BUFFER to STRUCT."
-   (setf (buffer-local-value 'better-jumper--jump-struct buffer) struct))
+  (setf (buffer-local-value 'better-jumper--jump-struct buffer) struct))
 
 (defun better-jumper--set-struct (context struct)
   "Set jump struct for CONTEXT to STRUCT."
   (pcase better-jumper-context
-      (`buffer (better-jumper--set-buffer-struct context struct))
-      (`window (better-jumper--set-window-struct context struct))))
+    (`buffer (better-jumper--set-buffer-struct context struct))
+    (`window (better-jumper--set-window-struct context struct))))
 
 (defun better-jumper--find-buffer-struct-savehist (buffer)
   "Look for BUFFER jump history in savehist variable."
@@ -227,8 +227,8 @@ buffer if CONTEXT parameter is missing."
 (defun better-jumper--set-marker-table (context table)
   "Set marker table for CONTEXT to TABLE."
   (pcase better-jumper-context
-      (`buffer (better-jumper--set-buffer-marker-table context table))
-      (`window (better-jumper--set-window-marker-table context table))))
+    (`buffer (better-jumper--set-buffer-marker-table context table))
+    (`window (better-jumper--set-window-marker-table context table))))
 
 (defun better-jumper--get-buffer-marker-table (&optional buffer)
   "Get current marker table for BUFFER.
@@ -315,21 +315,21 @@ Uses current context if CONTEXT is nil."
         (first-file-name nil)
         (excluded nil))
     (when (and (not file-name)
-                 (string-match-p better-jumper--buffer-targets buffer-name))
-        (setq file-name buffer-name))
-      (when file-name
-        (dolist (pattern better-jumper-ignored-file-patterns)
-          (when (string-match-p pattern file-name)
-            (setq excluded t)))
-        (unless excluded
-          (unless (ring-empty-p jump-list)
-            (setq first-file-name (nth 0 (ring-ref jump-list 0)))
-            (setq first-point (nth 1 (ring-ref jump-list 0))))
-          (unless (and (equal first-point current-point)
-                       (equal first-file-name file-name))
-            (let ((key (better-jumper--make-key)))
-              (puthash key current-marker marker-table)
-              (ring-insert jump-list `(,file-name ,current-point ,key))))))))
+               (string-match-p better-jumper--buffer-targets buffer-name))
+      (setq file-name buffer-name))
+    (when file-name
+      (dolist (pattern better-jumper-ignored-file-patterns)
+        (when (string-match-p pattern file-name)
+          (setq excluded t)))
+      (unless excluded
+        (unless (ring-empty-p jump-list)
+          (setq first-file-name (nth 0 (ring-ref jump-list 0)))
+          (setq first-point (nth 1 (ring-ref jump-list 0))))
+        (unless (and (equal first-point current-point)
+                     (equal first-file-name file-name))
+          (let ((key (better-jumper--make-key)))
+            (puthash key current-marker marker-table)
+            (ring-insert jump-list `(,file-name ,current-point ,key))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;   PUBLIC FUNCTIONS    ;;;
@@ -380,11 +380,11 @@ If COUNT is nil then defaults to 1."
   (let* ((count (or count 1))
          (struct (better-jumper--get-struct))
          (idx (better-jumper-jump-list-struct-idx struct)))
-        (when (= idx -1)
-          (setq idx 0)
-          (setf (better-jumper-jump-list-struct-idx struct) 0)
-          (better-jumper--push))
-        (better-jumper--jump idx (- 0 count))))
+    (when (= idx -1)
+      (setq idx 0)
+      (setf (better-jumper-jump-list-struct-idx struct) 0)
+      (better-jumper--push))
+    (better-jumper--jump idx (- 0 count))))
 
 ;;;###autoload
 (defun better-jumper-jump-newest ()

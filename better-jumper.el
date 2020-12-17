@@ -450,18 +450,15 @@ Cleans up deleted windows and copies history to newly created windows."
              (not better-jumper-switching-perspectives))
     (let* ((window-list (window-list-1 nil nil t))
            (curr-window (selected-window))
+           (new-window (previous-window))
            (source-jump-struct (better-jumper--get-struct curr-window))
            (source-jump-list (better-jumper--get-struct-jump-list source-jump-struct)))
-      (unless (ring-empty-p source-jump-list))
-        (dolist (window window-list)
-          (let* ((target-jump-struct (better-jumper--get-struct window))
-                 (target-jump-list (better-jumper--get-struct-jump-list target-jump-struct)))
-            (when (ring-empty-p target-jump-list)
-              (setf (better-jumper-jump-list-struct-idx target-jump-struct) (better-jumper-jump-list-struct-idx source-jump-struct))
-              (setf (better-jumper-jump-list-struct-ring target-jump-struct) (ring-copy source-jump-list))))))))
-
-(add-hook 'window-configuration-change-hook #'better-jumper--window-configuration-hook)
-
+      (unless (ring-empty-p source-jump-list)
+        (let* ((target-jump-struct (better-jumper--get-struct new-window))
+               (target-jump-list (better-jumper--get-struct-jump-list target-jump-struct)))
+          (when (ring-empty-p target-jump-list)
+            (setf (better-jumper-jump-list-struct-idx target-jump-struct) (better-jumper-jump-list-struct-idx source-jump-struct))
+            (setf (better-jumper-jump-list-struct-ring target-jump-struct) (ring-copy source-jump-list))))))))
 
 ;;;;;;;;;;;;;;;;;;;
 ;;;   SAVEHIST  ;;;
@@ -534,11 +531,13 @@ Cleans up deleted windows and copies history to newly created windows."
   "Enable better-jumper-mode in the current buffer."
   (unless (or (minibufferp)
               (apply #'derived-mode-p better-jumper-disabled-modes))
+    (add-hook 'window-configuration-change-hook #'better-jumper--window-configuration-hook nil t)
     (better-jumper-local-mode +1)))
 
 ;;;###autoload
 (defun turn-off-better-jumper-mode ()
   "Disable `better-jumper-local-mode' in the current buffer."
+  (remove-hook 'window-configuration-change-hook #'better-jumper--window-configuration-hook t)
   (better-jumper-local-mode -1))
 
 ;;;###autoload

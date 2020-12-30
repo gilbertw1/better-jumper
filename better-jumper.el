@@ -120,6 +120,15 @@
 (defvar better-jumper-switching-perspectives nil
   "Flag indicating if perspective switch is in progress.")
 
+(defvar better-jumper--before-persp-switch-persp-name nil
+  "Persp name before perspective persp switch.")
+
+(defvar better-jumper--before-persp-switch-jumps nil
+  "Jumps before perspective persp switch.")
+
+(defvar better-jumper--before-persp-switch-point-marker nil
+  "Point before perspective persp switch.")
+
 (defvar better-jumper--buffer-targets "\\*\\(new\\|scratch\\)\\*"
   "Regexp to match against `buffer-name' to determine whether it's a valid jump target.")
 
@@ -344,7 +353,9 @@ POS defaults to point."
                    (evil-visual-state-p)))
     (push-mark pos t))
 
-  (unless better-jumper--jumping
+  (unless (or
+           better-jumper--jumping
+           (better-jumper--ignore-persp-change))
     ;; clear out intermediary jumps when a new one is set
     (let* ((struct (better-jumper--get-struct))
            (jump-list (better-jumper--get-struct-jump-list struct))
@@ -357,6 +368,14 @@ POS defaults to point."
       (when pos
         (goto-char pos))
       (better-jumper--push))))
+
+(defun better-jumper--ignore-persp-change ()
+  "Determine if jump is being added as the result of a persp switch."
+  (and
+   better-jumper--before-persp-switch-persp-name
+   better-jumper--before-persp-switch-point-marker
+   (not (string= better-jumper--before-persp-switch-persp-name (safe-persp-name (get-current-persp))))
+   (equal better-jumper--before-persp-switch-point-marker (point-marker))))
 
 ;;;###autoload
 (defun better-jumper-jump-backward (&optional count)
@@ -427,13 +446,25 @@ context and will default to current context if not provided."
 ;;;;;;;;;;;;;;;;;;
 
 (defun better-jumper--before-persp-deactivate (&rest args)
-  "Indicate that perspective switch is in progress. Ignore ARGS."
+  "Indicate that perspective switch is in progress. Ignore ARGS.
+Additionally capture persp and jump information."
   (ignore args)
+  (setq better-jumper--before-persp-switch-persp-name (safe-persp-name (get-current-persp)))
+  (setq better-jumper--before-persp-switch-jumps (better-jumper--get-struct (better-jumper--get-current-context)))
+  (setq better-jumper--before-persp-switch-point-marker (point-marker))
   (setq better-jumper-switching-perspectives t))
 
 (defun better-jumper--on-persp-activate (&rest args)
-  "Indicate that perspective switch is completed. Ignore ARGS."
+  "Indicate that perspective switch is completed. Ignore ARGS.
+Optionally clear jump list if jumping to new perspective to prevent
+leaking jump lists."
   (ignore args)
+  (when (and
+       better-jumper--before-persp-switch-persp-name
+       better-jumper--before-persp-switch-jumps
+       (not (string= better-jumper--before-persp-switch-persp-name (safe-persp-name (get-current-persp))))
+       (eq better-jumper--before-persp-switch-jumps (better-jumper--get-struct (better-jumper--get-current-context))))
+    (better-jumper-clear-jumps))
   (setq better-jumper-switching-perspectives nil))
 
 (with-eval-after-load 'persp-mode

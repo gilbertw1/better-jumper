@@ -44,6 +44,7 @@
 ;;; Code:
 
 (require 'seq)
+(require 'cl-macs)
 
 (defgroup better-jumper nil
   "Better jumper configuration options."

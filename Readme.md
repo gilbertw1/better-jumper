@@ -16,11 +16,9 @@ Better-jumper is available on MELPA.
 (require 'better-jumper)
 ```
 
-`better-jumper` comes with two global modes: `better-jumper-mode` and
-`better-jumper-override-mode`, and two local modes: `better-jumper-local-mode` and
-`better-jumper-override-local-mode`.
+`better-jumper` comes with a global mode: `better-jumper-mode` and a local mode: `better-jumper-local-mode`.
 
-You can either a) enable one or both globally:
+You can either a) enable globally:
 
 ```elisp
 (better-jumper-mode +1)
@@ -32,7 +30,7 @@ You can either a) enable one or both globally:
 (add-hook 'python-mode-hook #'turn-off-better-jumper-mode)
 ```
 
-Or b) enable one or both locally, where you need it:
+Or b) enable locally, where you need it:
 
 ```elisp
 (add-hook 'python-mode-hook #'turn-on-better-jumper-mode)

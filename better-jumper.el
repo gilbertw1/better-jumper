@@ -349,6 +349,7 @@ Uses current context if CONTEXT is nil."
 (defun better-jumper-set-jump (&optional pos)
   "Set jump point at POS.
 POS defaults to point."
+  (interactive)
   (unless (or (region-active-p)
               (and (boundp 'evil-visual-state-p)
                    (evil-visual-state-p)))

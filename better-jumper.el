@@ -420,6 +420,7 @@ If COUNT is nil then defaults to 1."
   "Clears jump list for WINDOW-OR-BUFFER.
 WINDOW-OR-BUFFER should be either a window or buffer depending on the
 context and will default to current context if not provided."
+  (interactive)
   (let* ((context (or window-or-buffer (better-jumper--get-current-context))))
     (better-jumper--set-struct context (make-better-jumper-jump-list-struct))))
 

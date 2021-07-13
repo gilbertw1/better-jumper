@@ -136,9 +136,6 @@
 (defvar better-jumper-savehist nil
   "History of `better-jumper' jumps that are persisted with `savehist'.")
 
-(defvar better-jump--last-jump-pos nil
-  "Keep track of the end location of the last jump.")
-
 (defvar-local better-jumper--jump-struct nil
   "Jump struct for current buffer.")
 
@@ -300,6 +297,8 @@ Uses current context if CONTEXT is nil."
                (marker-key (nth 2 place))
                (marker (gethash marker-key marker-table)))
           (setq better-jumper--jumping t)
+          (when better-jumper-use-evil-jump-advice
+            (setq evil--jumps-jumping-backward t))
           (if (string-match-p better-jumper--buffer-targets file-name)
               (switch-to-buffer file-name)
             (find-file file-name))
@@ -308,7 +307,6 @@ Uses current context if CONTEXT is nil."
             (goto-char pos)
             (puthash marker-key (point-marker) marker-table))
           (setf (better-jumper-jump-list-struct-idx (better-jumper--get-struct context)) idx)
-          (setq better-jump--last-jump-pos (point))
           (setq better-jumper--jumping nil)
           (run-hooks 'better-jumper-post-jump-hook))))))
 
@@ -548,8 +546,7 @@ Cleans up deleted windows and copies history to newly created windows."
 (with-eval-after-load 'evil
   (defadvice evil-set-jump (before better-jumper activate)
     (when (and (bound-and-true-p better-jumper-local-mode)
-               better-jumper-use-evil-jump-advice
-               (not (equal better-jump--last-jump-pos (point))))
+               better-jumper-use-evil-jump-advice)
       (better-jumper-set-jump))))
 
 (push '(better-jumper-struct . writable) window-persistent-parameters)

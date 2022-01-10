@@ -1,4 +1,5 @@
 # better-jumper
+[![NonGNU ELPA](https://elpa.nongnu.org/nongnu/better-jumper.svg)](https://elpa.nongnu.org/nongnu/better-jumper.html)
 
 A configurable jump list implementation for Emacs that can be used to easily
 jump back to previous locations.
@@ -8,7 +9,7 @@ jump back to previous locations.
 
 ## Install
 
-Better-jumper is available on MELPA.
+Better-jumper is available on [NonGNU ELPA](https://elpa.nongnu.org/) or MELPA.
 
 `M-x package-install better-jumper`
 

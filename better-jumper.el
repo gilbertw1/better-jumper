@@ -4,7 +4,7 @@
 ;; Maintainer: Bryan Gilbert <bryan@bryan.sh>
 ;; Created: March 20, 2019
 ;; Modified: March 26, 2019
-;; Version: 1.0.0
+;; Version: 1.0.1
 ;; Keywords: convenience, jump, history, evil
 ;; Homepage: https://github.com/gilbertw1/better-jumper
 ;; Package-Requires: ((emacs "25.1"))
@@ -26,7 +26,7 @@
 ;; GNU General Public License for more details.
 ;;
 ;; You should have received a copy of the GNU General Public License
-;; along with Better-jumper.  If not, see <http://www.gnu.org/licenses/>.
+;; along with Better-jumper.  If not, see <https://www.gnu.org/licenses/>.
 
 ;;; Commentary:
 ;;

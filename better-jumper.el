@@ -154,6 +154,27 @@
     (setf (better-jumper-jump-list-struct-ring struct-copy) (ring-copy jump-list))
     struct-copy))
 
+(defun better-jumper--copy-struct-for-savehist (struct)
+  "Return a copy of STRUCT safe for savehist (strips buffer objects)."
+  (let ((jump-list (better-jumper--get-struct-jump-list struct))
+        (struct-copy (make-better-jumper-jump-list-struct)))
+    (setf (better-jumper-jump-list-struct-idx struct-copy) (better-jumper-jump-list-struct-idx struct))
+    (setf (better-jumper-jump-list-struct-ring struct-copy) (make-ring better-jumper-max-length))
+    ;; Copy jumps but strip buffer objects (4th element)
+    (dotimes (i (ring-length jump-list))
+      (let* ((jump (ring-ref jump-list i))
+             (savehist-jump (list (nth 0 jump) (nth 1 jump) (nth 2 jump))))
+        (ring-insert (better-jumper-jump-list-struct-ring struct-copy) savehist-jump)))
+    struct-copy))
+
+(defun better-jumper--get-buffer-file-name (&optional buffer)
+  "Get file name for BUFFER, supporting indirect buffers.
+Uses current buffer if BUFFER is nil."
+  (let ((buf (or buffer (current-buffer))))
+    (or (buffer-file-name buf)
+        (and (buffer-base-buffer buf)
+             (buffer-file-name (buffer-base-buffer buf))))))
+
 (defun better-jumper--get-current-context ()
   "Get current context item. Either current window or buffer."
   (pcase better-jumper-context
@@ -176,7 +197,7 @@
 
 (defun better-jumper--find-buffer-struct-savehist (buffer)
   "Look for BUFFER jump history in savehist variable."
-  (let ((filename (buffer-file-name buffer)))
+  (let ((filename (better-jumper--get-buffer-file-name buffer)))
     (when filename
       (nth 1
            (seq-find (lambda (e)
@@ -295,13 +316,21 @@ Uses current context if CONTEXT is nil."
                (file-name (nth 0 place))
                (pos (nth 1 place))
                (marker-key (nth 2 place))
+               (buffer-obj (when (>= (length place) 4) (nth 3 place)))
                (marker (gethash marker-key marker-table)))
           (setq better-jumper--jumping t)
           (when better-jumper-use-evil-jump-advice
             (setq evil--jumps-jump-command t))
-          (if (string-match-p better-jumper--buffer-targets file-name)
-              (switch-to-buffer file-name)
-            (find-file file-name))
+          (cond
+           ;; Try to use stored buffer object if valid
+           ((and buffer-obj (buffer-live-p buffer-obj))
+            (switch-to-buffer buffer-obj))
+           ;; Fallback to buffer name matching for special buffers
+           ((string-match-p better-jumper--buffer-targets file-name)
+            (switch-to-buffer file-name))
+           ;; Fallback to find-file for regular files
+           (t
+            (find-file file-name)))
           (if (and marker (marker-position marker))
               (goto-char marker)
             (goto-char pos)
@@ -315,7 +344,7 @@ Uses current context if CONTEXT is nil."
 Uses current context if CONTEXT is nil."
   (let ((jump-list (better-jumper--get-jump-list context))
         (marker-table (better-jumper--get-marker-table context))
-        (file-name (buffer-file-name))
+        (file-name (better-jumper--get-buffer-file-name))
         (buffer-name (buffer-name))
         (current-marker (point-marker))
         (current-point (point))
@@ -337,7 +366,7 @@ Uses current context if CONTEXT is nil."
                      (equal first-file-name file-name))
           (let ((key (better-jumper--make-key)))
             (puthash key current-marker marker-table)
-            (ring-insert jump-list `(,file-name ,current-point ,key))))))))
+            (ring-insert jump-list `(,file-name ,current-point ,key ,(current-buffer)))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;   PUBLIC FUNCTIONS    ;;;
@@ -506,7 +535,7 @@ Cleans up deleted windows and copies history to newly created windows."
       (let* ((buffer-name (nth 0 entry))
              (struct (nth 1 entry))
              (found-buffer (seq-find (lambda (b)
-                                       (or (eq buffer-name (buffer-file-name b))
+                                       (or (eq buffer-name (better-jumper--get-buffer-file-name b))
                                            (eq buffer-name (buffer-name b))))
                                      (buffer-list))))
         (when found-buffer
@@ -516,7 +545,7 @@ Cleans up deleted windows and copies history to newly created windows."
 
 (defun better-jumper--is-local-file-buffer (buffer)
   "Return non-nil if BUFFER refers to a local file that exists."
-  (let ((filename (buffer-file-name buffer)))
+  (let ((filename (better-jumper--get-buffer-file-name buffer)))
     (and filename
          (not (file-remote-p filename))
          (file-exists-p filename))))
@@ -532,8 +561,8 @@ Cleans up deleted windows and copies history to newly created windows."
                     better-jumper-buffer-savehist-size)))
       (setq better-jumper-savehist
             (mapcar #'(lambda (buffer)
-                        (let ((filename (buffer-file-name buffer))
-                              (struct (better-jumper--copy-struct (better-jumper--get-buffer-struct buffer))))
+                        (let ((filename (better-jumper--get-buffer-file-name buffer))
+                              (struct (better-jumper--copy-struct-for-savehist (better-jumper--get-buffer-struct buffer))))
                           (list filename struct)))
                     buffers)))))
 

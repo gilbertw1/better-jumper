@@ -129,6 +129,28 @@ This number dictates how many of the most recent buffers should have their jump
 state saved to the savehist file when savehist is enabled the the context is set
 to `'buffer`.
 
+#### History Grouping (`better-jumper-history-group-function`)
+
+When set to a function, enables segregating jump histories based on the
+function's return value. The function is called to get a string key for the
+current context, and each unique key gets its own independent jump history. When
+the function returns `nil`, a single shared history is used. This allows dynamic
+grouping by workspace, project, or any other criteria.
+
+```elisp
+;; Always group by perspective
+(setq better-jumper-history-group-function #'persp-current-name)
+
+;; Conditionally group by project (nil when no project)
+(setq better-jumper-history-group-function #'projectile-project-root)
+
+;; Context-aware grouping
+(setq better-jumper-history-group-function
+      (lambda ()
+        (when (string-match-p "work" default-directory)
+          (format "work-%s" (projectile-project-name)))))
+```
+
 # Hooks
 
 #### Pre-jump Hook (`better-jumper-pre-jump-hook`)

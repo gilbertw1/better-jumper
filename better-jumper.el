@@ -110,6 +110,15 @@
   :group 'better-jumper
   :type  '(list symbol))
 
+(defcustom better-jumper-history-group-function nil
+  "Function to determine key for segregating jump histories.
+When non-nil, this function will be called to get a key for the current context.
+The function should return a string to use as a hash table key, or nil.
+When the function is nil or returns nil, jumps are stored in a single history."
+  :type '(choice (const :tag "No history segregation" nil)
+                 (function :tag "Function returning history key string or nil"))
+  :group 'better-jumper)
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -138,6 +147,9 @@
 
 (defvar-local better-jumper--jump-struct nil
   "Jump struct for current buffer.")
+
+(defvar-local better-jumper--jump-struct-hashtable nil
+  "Hash table of jump structs for current buffer, keyed by history group.")
 
 (defvar-local better-jumper--marker-table nil
   "Marker table for current buffer.")
@@ -185,27 +197,61 @@
 
 (defun better-jumper--get-buffer-struct (&optional buffer)
   "Get current jump struct for BUFFER.
-Creates and sets jump struct if one does not exist. buffer if BUFFER parameter
-is missing."
+Creates and sets jump struct if one does not exist. Uses current buffer
+if BUFFER parameter is missing."
   (let* ((buffer (or buffer (current-buffer)))
-         (jump-struct (buffer-local-value 'better-jumper--jump-struct buffer)))
-    (unless jump-struct
-      (setq jump-struct (better-jumper--find-buffer-struct-savehist buffer))
-      (unless jump-struct
-        (setq jump-struct (make-better-jumper-jump-list-struct))
-        (better-jumper--set-buffer-struct buffer jump-struct)))
-    jump-struct))
+         (key (when better-jumper-history-group-function
+                (funcall better-jumper-history-group-function))))
+    (if key
+        ;; When function returns a key, store multiple histories in a hash table
+        (let* ((jump-struct-hashtable (buffer-local-value 'better-jumper--jump-struct-hashtable buffer))
+               (jump-struct nil))
+          ;; Create hash table if it doesn't exist
+          (unless jump-struct-hashtable
+            (setq jump-struct-hashtable (make-hash-table :test 'equal))
+            (setf (buffer-local-value 'better-jumper--jump-struct-hashtable buffer) jump-struct-hashtable))
+          ;; Get or create jump struct for this key
+          (setq jump-struct (gethash key jump-struct-hashtable))
+          (unless jump-struct
+            (setq jump-struct (make-better-jumper-jump-list-struct))
+            (puthash key jump-struct jump-struct-hashtable))
+          jump-struct)
+      ;; When function is nil or returns nil, use single history
+      (let ((jump-struct (buffer-local-value 'better-jumper--jump-struct buffer)))
+        (unless jump-struct
+          (setq jump-struct (better-jumper--find-buffer-struct-savehist buffer))
+          (unless jump-struct
+            (setq jump-struct (make-better-jumper-jump-list-struct))
+            (better-jumper--set-buffer-struct buffer jump-struct)))
+        jump-struct))))
 
 (defun better-jumper--get-window-struct (&optional window)
   "Get current jump struct for WINDOW.
-Creates and sets jump struct if one does not exist. buffer if WINDOW parameter
-is missing."
+Creates and sets jump struct if one does not exist. Use current window
+if WINDOW parameter is missing."
   (let* ((window (or window (frame-selected-window)))
-         (jump-struct (window-parameter window 'better-jumper-struct)))
-    (unless jump-struct
-      (setq jump-struct (make-better-jumper-jump-list-struct))
-      (better-jumper--set-struct window jump-struct))
-    jump-struct))
+         (key (when better-jumper-history-group-function
+                (funcall better-jumper-history-group-function))))
+    (if key
+        ;; When function returns a key, store multiple histories in a hash table
+        (let* ((jump-struct-hashtable (window-parameter window 'better-jumper-struct-hashtable))
+               (jump-struct nil))
+          ;; Create hash table if it doesn't exist
+          (unless jump-struct-hashtable
+            (setq jump-struct-hashtable (make-hash-table :test 'equal))
+            (set-window-parameter window 'better-jumper-struct-hashtable jump-struct-hashtable))
+          ;; Get or create jump struct for this key
+          (setq jump-struct (gethash key jump-struct-hashtable))
+          (unless jump-struct
+            (setq jump-struct (make-better-jumper-jump-list-struct))
+            (puthash key jump-struct jump-struct-hashtable))
+          jump-struct)
+      ;; When function is nil or returns nil, use single history
+      (let ((jump-struct (window-parameter window 'better-jumper-struct)))
+        (unless jump-struct
+          (setq jump-struct (make-better-jumper-jump-list-struct))
+          (better-jumper--set-struct window jump-struct))
+        jump-struct))))
 
 (defun better-jumper--get-struct (&optional context)
   "Get current jump struct for CONTEXT.
